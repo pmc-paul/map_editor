@@ -8,6 +8,9 @@ set(CMAKE_AUTOMOC ON)
 
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
 
+find_package(yaml-cpp)
+include_directories(${YAML_CPP_INCLUDE_DIRS})
+
 file(GLOB QT_RESOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} resources/*.qrc)
 file(GLOB_RECURSE QT_MOC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINKS include/*.h)
 
@@ -19,4 +22,4 @@ file(GLOB_RECURSE QT_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} FOLLOW_SYMLINK
 add_executable(${PROJECT_NAME} ${QT_SOURCES} ${QT_RESOURCES_CPP} ${QT_MOC_H})
 
 target_include_directories (${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
-target_link_libraries(${PROJECT_NAME} Qt5::Widgets Qt5::Core Qt5::Gui ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} Qt5::Widgets Qt5::Core Qt5::Gui ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES})

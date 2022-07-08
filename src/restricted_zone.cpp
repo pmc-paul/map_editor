@@ -1,12 +1,11 @@
-#include "diagram_item.h"
-#include "arrow.h"
+#include "restricted_zone.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsSceneContextMenuEvent>
 #include <QMenu>
 #include <QPainter>
 
-DiagramItem::DiagramItem(DiagramType diagramType, QMenu *contextMenu,
+RestrictedZone::RestrictedZone(RestrictedZoneType diagramType, QMenu *contextMenu,
                          QGraphicsItem *parent)
     : QGraphicsPolygonItem(parent), myDiagramType(diagramType)
     , myContextMenu(contextMenu)
@@ -44,30 +43,30 @@ DiagramItem::DiagramItem(DiagramType diagramType, QMenu *contextMenu,
     setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
 }
 
-void DiagramItem::removeArrow(Arrow *arrow)
-{
-    arrows.removeAll(arrow);
-}
+// void RestrictedZone::removeArrow(Arrow *arrow)
+// {
+//     arrows.removeAll(arrow);
+// }
 
-void DiagramItem::removeArrows()
-{
-    // need a copy here since removeArrow() will
-    // modify the arrows container
-    const auto arrowsCopy = arrows;
-    for (Arrow *arrow : arrowsCopy) {
-        arrow->startItem()->removeArrow(arrow);
-        arrow->endItem()->removeArrow(arrow);
-        scene()->removeItem(arrow);
-        delete arrow;
-    }
-}
+// void RestrictedZone::removeArrows()
+// {
+//     // need a copy here since removeArrow() will
+//     // modify the arrows container
+//     const auto arrowsCopy = arrows;
+//     for (Arrow *arrow : arrowsCopy) {
+//         arrow->startItem()->removeArrow(arrow);
+//         arrow->endItem()->removeArrow(arrow);
+//         scene()->removeItem(arrow);
+//         delete arrow;
+//     }
+// }
 
-void DiagramItem::addArrow(Arrow *arrow)
-{
-    arrows.append(arrow);
-}
+// void RestrictedZone::addArrow(Arrow *arrow)
+// {
+//     arrows.append(arrow);
+// }
 
-QPixmap DiagramItem::image() const
+QPixmap RestrictedZone::image() const
 {
     QPixmap pixmap(250, 250);
     pixmap.fill(Qt::transparent);
@@ -79,19 +78,19 @@ QPixmap DiagramItem::image() const
     return pixmap;
 }
 
-void DiagramItem::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
+void RestrictedZone::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
     scene()->clearSelection();
     setSelected(true);
     myContextMenu->exec(event->screenPos());
 }
 
-QVariant DiagramItem::itemChange(GraphicsItemChange change, const QVariant &value)
+QVariant RestrictedZone::itemChange(GraphicsItemChange change, const QVariant &value)
 {
-    if (change == QGraphicsItem::ItemPositionChange) {
-        for (Arrow *arrow : qAsConst(arrows))
-            arrow->updatePosition();
-    }
+    // if (change == QGraphicsItem::ItemPositionChange) {
+    //     for (Arrow *arrow : qAsConst(arrows))
+    //         arrow->updatePosition();
+    // }
 
     return value;
 }

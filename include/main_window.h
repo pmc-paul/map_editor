@@ -1,11 +1,12 @@
 #ifndef MAIN_WINDOW_H
 #define MAIN_WINDOW_H
 
-#include "diagram_item.h"
-
 #include <QMainWindow>
+#include <QDebug>
 
-class DiagramScene;
+#include "map_file_parser.h"
+
+class MapScene;
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -30,25 +31,23 @@ public:
    MainWindow();
 
 private slots:
-    void backgroundButtonGroupClicked(QAbstractButton *button);
-    void buttonGroupClicked(QAbstractButton *button);
+    void openFile();
+    void saveFile();
+    void saveFileAs();
+
+    void addWaypoint();
+    void addRestrictedZone();
     void deleteItem();
-    void pointerGroupClicked();
-    void bringToFront();
-    void sendToBack();
-    void itemInserted(DiagramItem *item);
-    void textInserted(QGraphicsTextItem *item);
-    void currentFontChanged(const QFont &font);
-    void fontSizeChanged(const QString &size);
+
+    void viewWaypoints();
+    void viewRestrictedZones();
+
+    // void itemInserted(DiagramItem *item);
+    // void textInserted(QGraphicsTextItem *item);
+    // void itemSelected(QGraphicsItem *item);
+
     void sceneScaleChanged(const QString &scale);
-    void textColorChanged();
-    void itemColorChanged();
-    void lineColorChanged();
-    void textButtonTriggered();
-    void fillButtonTriggered();
-    void lineButtonTriggered();
-    void handleFontChange();
-    void itemSelected(QGraphicsItem *item);
+
     void about();
 
 private:
@@ -56,53 +55,44 @@ private:
     void createActions();
     void createMenus();
     void createToolbars();
-    QWidget *createBackgroundCellWidget(const QString &text,
-                                        const QString &image);
-    QWidget *createCellWidget(const QString &text,
-                              DiagramItem::DiagramType type);
-    QMenu *createColorMenu(const char *slot, QColor defaultColor);
-    QIcon createColorToolButtonIcon(const QString &image, QColor color);
-    QIcon createColorIcon(QColor color);
 
-    DiagramScene *scene;
+    MapFileParser *mapFileParser;
+    MapConfig *mapConfig;
+    MapEditorConfig *mapEditorConfig;
+
+    MapScene *scene;
     QGraphicsView *view;
 
+    // Actions
+    QAction *openFileAction;
+    QAction *saveFileAction;
+    QAction *saveFileAsAction;
     QAction *exitAction;
-    QAction *addAction;
-    QAction *deleteAction;
 
-    QAction *toFrontAction;
-    QAction *sendBackAction;
+    QAction *addWaypointAction;
+    QAction *addRestrictedZoneAction;
+    QAction *deleteItemAction;
+
+    QAction *viewWaypointsAction;
+    QAction *viewRestrictedZonesAction;
+
     QAction *aboutAction;
 
+    // Menus
     QMenu *fileMenu;
-    QMenu *itemMenu;
+    QMenu *editMenu;
+    QMenu *viewMenu;
     QMenu *aboutMenu;
 
-    QToolBar *textToolBar;
-    QToolBar *editToolBar;
-    QToolBar *colorToolBar;
-    QToolBar *pointerToolbar;
+    // Toolbar
+    QToolBar *openToolbar;
+    QToolBar *editToolbar;
+    QToolBar *viewToolbar;
 
     QComboBox *sceneScaleCombo;
-    QComboBox *itemColorCombo;
-    QComboBox *textColorCombo;
-    QComboBox *fontSizeCombo;
-    QFontComboBox *fontCombo;
 
+    // Toolbox
     QToolBox *toolBox;
-    QButtonGroup *buttonGroup;
-    QButtonGroup *pointerTypeGroup;
-    QButtonGroup *backgroundButtonGroup;
-    QToolButton *fontColorToolButton;
-    QToolButton *fillColorToolButton;
-    QToolButton *lineColorToolButton;
-    QAction *boldAction;
-    QAction *underlineAction;
-    QAction *italicAction;
-    QAction *textAction;
-    QAction *fillAction;
-    QAction *lineAction;
 };
 
 #endif // MAIN_WINDOW_H

@@ -1,7 +1,6 @@
-#include "arrow.h"
-#include "diagram_item.h"
-#include "diagram_scene.h"
-#include "diagram_text_item.h"
+#include "map_scene.h"
+#include "waypoint.h"
+#include "restricted_zone.h"
 #include "main_window.h"
 
 #include <QtWidgets>
@@ -11,17 +10,17 @@ const int InsertTextButton = 10;
 MainWindow::MainWindow()
 {
     createActions();
-    createToolBox();
-    createMenus();
+    createToolBox();    // 
+    createMenus();      // barre du haut avec les options
 
-    scene = new DiagramScene(itemMenu, this);
-    scene->setSceneRect(QRectF(0, 0, 5000, 5000));
-    connect(scene, &DiagramScene::itemInserted,
-            this, &MainWindow::itemInserted);
-    connect(scene, &DiagramScene::textInserted,
-            this, &MainWindow::textInserted);
-    connect(scene, &DiagramScene::itemSelected,
-            this, &MainWindow::itemSelected);
+    scene = new MapScene(viewMenu, this);
+    // scene->setSceneRect(QRectF(0, 0, 1000, 1000));
+    // connect(scene, &MapScene::itemInserted,
+    //         this, &MainWindow::itemInserted);
+    // connect(scene, &MapScene::textInserted,
+    //         this, &MainWindow::textInserted);
+    // connect(scene, &MapScene::itemSelected,
+    //         this, &MainWindow::itemSelected);
     createToolbars();
 
     QHBoxLayout *layout = new QHBoxLayout;
@@ -29,131 +28,114 @@ MainWindow::MainWindow()
     view = new QGraphicsView(scene);
     layout->addWidget(view);
 
+    view->setDragMode(QGraphicsView::ScrollHandDrag);
+
     QWidget *widget = new QWidget;
     widget->setLayout(layout);
 
     setCentralWidget(widget);
-    setWindowTitle(tr("Diagramscene"));
-    setUnifiedTitleAndToolBarOnMac(true);
-}
-
-void MainWindow::backgroundButtonGroupClicked(QAbstractButton *button)
-{
-    const QList<QAbstractButton *> buttons = backgroundButtonGroup->buttons();
-    for (QAbstractButton *myButton : buttons) {
-        if (myButton != button)
-            button->setChecked(false);
-    }
-    QString text = button->text();
-    if (text == tr("Blue Grid"))
-        scene->setBackgroundBrush(QPixmap(":/images/background1.png"));
-    else if (text == tr("White Grid"))
-        scene->setBackgroundBrush(QPixmap(":/images/background2.png"));
-    else if (text == tr("Gray Grid"))
-        scene->setBackgroundBrush(QPixmap(":/images/background3.png"));
-    else
-        scene->setBackgroundBrush(QPixmap(":/images/background4.png"));
-
-    scene->update();
-    view->update();
-}
-
-void MainWindow::buttonGroupClicked(QAbstractButton *button)
-{
-    const QList<QAbstractButton *> buttons = buttonGroup->buttons();
-    for (QAbstractButton *myButton : buttons) {
-        if (myButton != button)
-            button->setChecked(false);
-    }
-    const int id = buttonGroup->id(button);
-    if (id == InsertTextButton) {
-        scene->setMode(DiagramScene::InsertText);
-    } else {
-        scene->setItemType(DiagramItem::DiagramType(id));
-        scene->setMode(DiagramScene::InsertItem);
-    }
+    setWindowTitle(tr("Map Editor"));
 }
 
 void MainWindow::deleteItem()
 {
-    QList<QGraphicsItem *> selectedItems = scene->selectedItems();
-    for (QGraphicsItem *item : qAsConst(selectedItems)) {
-        if (item->type() == Arrow::Type) {
-            scene->removeItem(item);
-            Arrow *arrow = qgraphicsitem_cast<Arrow *>(item);
-            arrow->startItem()->removeArrow(arrow);
-            arrow->endItem()->removeArrow(arrow);
-            delete item;
-        }
+    // QList<QGraphicsItem *> selectedItems = scene->selectedItems();
+    // for (QGraphicsItem *item : qAsConst(selectedItems)) {
+    //      scene->removeItem(item);
+    //      delete item;
+    // }
+    qDebug() << "Delete Item button was pressed";
+    return;
+}
+
+void MainWindow::openFile()
+{
+    qDebug() << "Open File button was pressed";
+
+    QString fileName = QFileDialog::getOpenFileName(this,
+    tr("Open Map"), "/home/willi/map_editor_ws/maps/sim", tr("Map Files (*.yaml)"));
+
+    if(fileName != "")
+    {
+        mapFileParser = new MapFileParser(fileName.toStdString());
+        mapConfig = mapFileParser->getMapConfig();
+        mapEditorConfig = mapFileParser->getMapEditorConfig();
+        
+        scene->displayMap(QString::fromStdString(mapConfig->filePath));
+
+        // set map editor settings from config
+        view->scale(mapEditorConfig->scale, mapEditorConfig->scale);  // triggers an event which initialize the scrollbars
+        view->rotate(mapEditorConfig->rotation);
+
+        view->verticalScrollBar()->setSliderPosition(mapEditorConfig->verticalScrollBarValue);
+        view->horizontalScrollBar()->setSliderPosition(mapEditorConfig->horizontalScrollBarValue);
+
+
+            // fit map to view
+                // adjust scrollbar position
+                // adjust zoom
+
+            // get image file
+            // get resolution
+
+            // get map editor params
+                // get scale
+                // get origin
+            
+            // get topological map 
+                // get waypoints
+                // render waypoints
+
+                // get restricted zones
+                // render restricted zones
     }
+    
 
-    selectedItems = scene->selectedItems();
-    for (QGraphicsItem *item : qAsConst(selectedItems)) {
-         if (item->type() == DiagramItem::Type)
-             qgraphicsitem_cast<DiagramItem *>(item)->removeArrows();
-         scene->removeItem(item);
-         delete item;
-     }
+    return;
 }
 
-void MainWindow::pointerGroupClicked()
+void MainWindow::saveFile()
 {
-    scene->setMode(DiagramScene::Mode(pointerTypeGroup->checkedId()));
+    qDebug() << "Save File button was pressed";
+
+    // save map editor config
+    mapEditorConfig->verticalScrollBarValue = view->verticalScrollBar()->value();
+    mapEditorConfig->horizontalScrollBarValue = view->horizontalScrollBar()->value();
+    mapFileParser->saveMapEditorParams();
+
+
+    // save map with waypoints and everything
+    return;
 }
 
-void MainWindow::bringToFront()
+void MainWindow::saveFileAs()
 {
-    if (scene->selectedItems().isEmpty())
-        return;
-
-    QGraphicsItem *selectedItem = scene->selectedItems().first();
-    const QList<QGraphicsItem *> overlapItems = selectedItem->collidingItems();
-
-    qreal zValue = 0;
-    for (const QGraphicsItem *item : overlapItems) {
-        if (item->zValue() >= zValue && item->type() == DiagramItem::Type)
-            zValue = item->zValue() + 0.1;
-    }
-    selectedItem->setZValue(zValue);
+    qDebug() << "Save File As button was pressed";
+    return;
 }
 
-void MainWindow::sendToBack()
+void MainWindow::addWaypoint()
 {
-    if (scene->selectedItems().isEmpty())
-        return;
-
-    QGraphicsItem *selectedItem = scene->selectedItems().first();
-    const QList<QGraphicsItem *> overlapItems = selectedItem->collidingItems();
-
-    qreal zValue = 0;
-    for (const QGraphicsItem *item : overlapItems) {
-        if (item->zValue() <= zValue && item->type() == DiagramItem::Type)
-            zValue = item->zValue() - 0.1;
-    }
-    selectedItem->setZValue(zValue);
+    qDebug() << "Add Waypoint button was pressed";
+    return;
 }
 
-void MainWindow::itemInserted(DiagramItem *item)
+void MainWindow::addRestrictedZone()
 {
-    pointerTypeGroup->button(int(DiagramScene::MoveItem))->setChecked(true);
-    scene->setMode(DiagramScene::Mode(pointerTypeGroup->checkedId()));
-    buttonGroup->button(int(item->diagramType()))->setChecked(false);
+    qDebug() << "Add Restricted Zone button was pressed";
+    return;
 }
 
-void MainWindow::textInserted(QGraphicsTextItem *)
+void MainWindow::viewWaypoints()
 {
-    buttonGroup->button(InsertTextButton)->setChecked(false);
-    scene->setMode(DiagramScene::Mode(pointerTypeGroup->checkedId()));
+    qDebug() << "View Waypoints button was pressed";
+    return;
 }
 
-void MainWindow::currentFontChanged(const QFont &)
+void MainWindow::viewRestrictedZones()
 {
-    handleFontChange();
-}
-
-void MainWindow::fontSizeChanged(const QString &)
-{
-    handleFontChange();
+    qDebug() << "View Restricted Zones button was pressed";
+    return;
 }
 
 void MainWindow::sceneScaleChanged(const QString &scale)
@@ -163,178 +145,97 @@ void MainWindow::sceneScaleChanged(const QString &scale)
     view->resetTransform();
     view->translate(oldMatrix.dx(), oldMatrix.dy());
     view->scale(newScale, newScale);
+
+    mapEditorConfig->scale = newScale;
+
+    qDebug() << "new scale: " << newScale;
+
+    return;
 }
 
-void MainWindow::textColorChanged()
-{
-    textAction = qobject_cast<QAction *>(sender());
-    fontColorToolButton->setIcon(createColorToolButtonIcon(
-                                     ":/images/textpointer.png",
-                                     qvariant_cast<QColor>(textAction->data())));
-    textButtonTriggered();
-}
-
-void MainWindow::itemColorChanged()
-{
-    fillAction = qobject_cast<QAction *>(sender());
-    fillColorToolButton->setIcon(createColorToolButtonIcon(
-                                     ":/images/floodfill.png",
-                                     qvariant_cast<QColor>(fillAction->data())));
-    fillButtonTriggered();
-}
-
-void MainWindow::lineColorChanged()
-{
-    lineAction = qobject_cast<QAction *>(sender());
-    lineColorToolButton->setIcon(createColorToolButtonIcon(
-                                     ":/images/linecolor.png",
-                                     qvariant_cast<QColor>(lineAction->data())));
-    lineButtonTriggered();
-}
-
-void MainWindow::textButtonTriggered()
-{
-    scene->setTextColor(qvariant_cast<QColor>(textAction->data()));
-}
-
-void MainWindow::fillButtonTriggered()
-{
-    scene->setItemColor(qvariant_cast<QColor>(fillAction->data()));
-}
-
-void MainWindow::lineButtonTriggered()
-{
-    scene->setLineColor(qvariant_cast<QColor>(lineAction->data()));
-}
-
-void MainWindow::handleFontChange()
-{
-    QFont font = fontCombo->currentFont();
-    font.setPointSize(fontSizeCombo->currentText().toInt());
-    font.setWeight(boldAction->isChecked() ? QFont::Bold : QFont::Normal);
-    font.setItalic(italicAction->isChecked());
-    font.setUnderline(underlineAction->isChecked());
-
-    scene->setFont(font);
-}
-
-void MainWindow::itemSelected(QGraphicsItem *item)
-{
-    DiagramTextItem *textItem =
-    qgraphicsitem_cast<DiagramTextItem *>(item);
-
-    QFont font = textItem->font();
-    fontCombo->setCurrentFont(font);
-    fontSizeCombo->setEditText(QString().setNum(font.pointSize()));
-    boldAction->setChecked(font.weight() == QFont::Bold);
-    italicAction->setChecked(font.italic());
-    underlineAction->setChecked(font.underline());
-}
+// void MainWindow::itemSelected(QGraphicsItem *item)
+// {
+//     DiagramTextItem *textItem =
+//     qgraphicsitem_cast<DiagramTextItem *>(item);
+// }
 
 void MainWindow::about()
 {
-    QMessageBox::about(this, tr("About Diagram Scene"),
-                       tr("The <b>Diagram Scene</b> example shows "
-                          "use of the graphics framework."));
+    QMessageBox::about(this, tr("About Map Editor"),
+                       tr("The <b>Map Editor</b> allows you to edit maps "
+                          "by adding waypoints and restricted zones."));
 }
 
 void MainWindow::createToolBox()
 {
-    buttonGroup = new QButtonGroup(this);
-    buttonGroup->setExclusive(false);
-    connect(buttonGroup, QOverload<QAbstractButton *>::of(&QButtonGroup::buttonClicked),
-            this, &MainWindow::buttonGroupClicked);
-    QGridLayout *layout = new QGridLayout;
-    layout->addWidget(createCellWidget(tr("Conditional"), DiagramItem::Conditional), 0, 0);
-    layout->addWidget(createCellWidget(tr("Process"), DiagramItem::Step),0, 1);
-    layout->addWidget(createCellWidget(tr("Input/Output"), DiagramItem::Io), 1, 0);
+    // Waypoints Editor Widget
+    QLabel *waypointsWidget = new QLabel("This widget will contain the tools\n required to add and edit waypoints.");
 
-    QToolButton *textButton = new QToolButton;
-    textButton->setCheckable(true);
-    buttonGroup->addButton(textButton, InsertTextButton);
-    textButton->setIcon(QIcon(QPixmap(":/images/textpointer.png")));
-    textButton->setIconSize(QSize(50, 50));
-    QGridLayout *textLayout = new QGridLayout;
-    textLayout->addWidget(textButton, 0, 0, Qt::AlignHCenter);
-    textLayout->addWidget(new QLabel(tr("Text")), 1, 0, Qt::AlignCenter);
-    QWidget *textWidget = new QWidget;
-    textWidget->setLayout(textLayout);
-    layout->addWidget(textWidget, 1, 1);
-
-    layout->setRowStretch(3, 10);
-    layout->setColumnStretch(2, 10);
-
-    QWidget *itemWidget = new QWidget;
-    itemWidget->setLayout(layout);
-
-    backgroundButtonGroup = new QButtonGroup(this);
-    connect(backgroundButtonGroup, QOverload<QAbstractButton *>::of(&QButtonGroup::buttonClicked),
-            this, &MainWindow::backgroundButtonGroupClicked);
-
-    QGridLayout *backgroundLayout = new QGridLayout;
-    backgroundLayout->addWidget(createBackgroundCellWidget(tr("Blue Grid"),
-                                                           ":/images/background1.png"), 0, 0);
-    backgroundLayout->addWidget(createBackgroundCellWidget(tr("White Grid"),
-                                                           ":/images/background2.png"), 0, 1);
-    backgroundLayout->addWidget(createBackgroundCellWidget(tr("Gray Grid"),
-                                                           ":/images/background3.png"), 1, 0);
-    backgroundLayout->addWidget(createBackgroundCellWidget(tr("No Grid"),
-                                                           ":/images/background4.png"), 1, 1);
-
-    backgroundLayout->setRowStretch(2, 10);
-    backgroundLayout->setColumnStretch(2, 10);
-
-    QWidget *backgroundWidget = new QWidget;
-    backgroundWidget->setLayout(backgroundLayout);
-
+    // Restricted Zones Widget
+    QLabel *restrictedZonesWidget = new QLabel("This widget will contain the tools\n required to add and edit restricted zones.");
 
     toolBox = new QToolBox;
     toolBox->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Ignored));
-    toolBox->setMinimumWidth(itemWidget->sizeHint().width());
-    toolBox->addItem(itemWidget, tr("Basic Flowchart Shapes"));
-    toolBox->addItem(backgroundWidget, tr("Backgrounds"));
+    toolBox->setMinimumWidth(waypointsWidget->sizeHint().width());
+    toolBox->addItem(waypointsWidget, tr("Waypoints Editor Widget"));
+    toolBox->addItem(restrictedZonesWidget, tr("Restricted Zones Editor Widget"));
 }
 
 void MainWindow::createActions()
 {
-    toFrontAction = new QAction(QIcon(":/images/bringtofront.png"),
-                                tr("Bring to &Front"), this);
-    toFrontAction->setShortcut(tr("Ctrl+F"));
-    toFrontAction->setStatusTip(tr("Bring item to front"));
-    connect(toFrontAction, &QAction::triggered, this, &MainWindow::bringToFront);
+    // File Actions
+    openFileAction = new QAction(QIcon(":/images/open.png"), tr("Open &File"), this);
+    openFileAction->setShortcut(tr("Ctrl+O"));
+    openFileAction->setStatusTip(tr("Open file"));
+    connect(openFileAction, &QAction::triggered, this, &MainWindow::openFile);
 
-    sendBackAction = new QAction(QIcon(":/images/sendtoback.png"), tr("Send to &Back"), this);
-    sendBackAction->setShortcut(tr("Ctrl+T"));
-    sendBackAction->setStatusTip(tr("Send item to back"));
-    connect(sendBackAction, &QAction::triggered, this, &MainWindow::sendToBack);
+    saveFileAction = new QAction(QIcon(":/images/save.png"), tr("Save &File"), this);
+    saveFileAction->setShortcut(tr("Ctrl+S"));
+    saveFileAction->setStatusTip(tr("Save file"));
+    connect(saveFileAction, &QAction::triggered, this, &MainWindow::saveFile);
 
-    deleteAction = new QAction(QIcon(":/images/delete.png"), tr("&Delete"), this);
-    deleteAction->setShortcut(tr("Delete"));
-    deleteAction->setStatusTip(tr("Delete item from diagram"));
-    connect(deleteAction, &QAction::triggered, this, &MainWindow::deleteItem);
+    saveFileAsAction = new QAction(QIcon(":/images/save_as.png"), tr("Save &File As"), this);
+    saveFileAsAction->setStatusTip(tr("Save file as..."));
+    connect(saveFileAsAction, &QAction::triggered, this, &MainWindow::saveFileAs);
 
     exitAction = new QAction(tr("E&xit"), this);
     exitAction->setShortcuts(QKeySequence::Quit);
-    exitAction->setStatusTip(tr("Quit Scenediagram example"));
+    exitAction->setStatusTip(tr("Quit Map Editor"));
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
-    boldAction = new QAction(tr("Bold"), this);
-    boldAction->setCheckable(true);
-    QPixmap pixmap(":/images/bold.png");
-    boldAction->setIcon(QIcon(pixmap));
-    boldAction->setShortcut(tr("Ctrl+B"));
-    connect(boldAction, &QAction::triggered, this, &MainWindow::handleFontChange);
+    // Edit Actions
+    addWaypointAction = new QAction(QIcon(":/images/background1.png"),
+                                tr("A&dd a New Waypoint"), this);
+    addWaypointAction->setStatusTip(tr("Add a new waypoint"));
+    connect(addWaypointAction, &QAction::triggered, this, &MainWindow::addWaypoint);
 
-    italicAction = new QAction(QIcon(":/images/italic.png"), tr("Italic"), this);
-    italicAction->setCheckable(true);
-    italicAction->setShortcut(tr("Ctrl+I"));
-    connect(italicAction, &QAction::triggered, this, &MainWindow::handleFontChange);
+    addRestrictedZoneAction = new QAction(QIcon(":/images/background2.png"),
+                                tr("Add a New R&estricted Zone"), this);
+    addRestrictedZoneAction->setStatusTip(tr("Add a new restricted zone"));
+    connect(addRestrictedZoneAction, &QAction::triggered, this, &MainWindow::addRestrictedZone);
 
-    underlineAction = new QAction(QIcon(":/images/underline.png"), tr("Underline"), this);
-    underlineAction->setCheckable(true);
-    underlineAction->setShortcut(tr("Ctrl+U"));
-    connect(underlineAction, &QAction::triggered, this, &MainWindow::handleFontChange);
+    deleteItemAction = new QAction(QIcon(":/images/delete.png"),
+                                tr("Delete Item"), this);
+    deleteItemAction->setStatusTip(tr("Delete selected item"));
+    connect(deleteItemAction, &QAction::triggered, this, &MainWindow::deleteItem);
 
+
+    // View Actions
+    viewWaypointsAction = new QAction(QIcon(":/images/background3.png"),
+                                tr("W&aypoints"), this);
+    viewWaypointsAction->setStatusTip(tr("View waypoints"));
+    viewWaypointsAction->setCheckable(true);
+    viewWaypointsAction->setChecked(true);
+    connect(viewWaypointsAction, &QAction::triggered, this, &MainWindow::viewWaypoints);
+
+    viewRestrictedZonesAction = new QAction(QIcon(":/images/background4.png"),
+                                tr("R&estricted Zones"), this);
+    viewRestrictedZonesAction->setStatusTip(tr("View restricted zones"));
+    viewRestrictedZonesAction->setCheckable(true);
+    viewRestrictedZonesAction->setChecked(true);
+    connect(viewRestrictedZonesAction, &QAction::triggered, this, &MainWindow::viewRestrictedZones);
+
+    // Help Actions
     aboutAction = new QAction(tr("A&bout"), this);
     aboutAction->setShortcut(tr("F1"));
     connect(aboutAction, &QAction::triggered, this, &MainWindow::about);
@@ -343,13 +244,21 @@ void MainWindow::createActions()
 void MainWindow::createMenus()
 {
     fileMenu = menuBar()->addMenu(tr("&File"));
+    fileMenu->addAction(openFileAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(saveFileAction);
+    fileMenu->addAction(saveFileAsAction);
+    fileMenu->addSeparator();
     fileMenu->addAction(exitAction);
 
-    itemMenu = menuBar()->addMenu(tr("&Item"));
-    itemMenu->addAction(deleteAction);
-    itemMenu->addSeparator();
-    itemMenu->addAction(toFrontAction);
-    itemMenu->addAction(sendBackAction);
+    editMenu = menuBar()->addMenu(tr("&Edit"));
+    editMenu->addAction(addWaypointAction);
+    editMenu->addAction(addRestrictedZoneAction);
+    editMenu->addAction(deleteItemAction);
+
+    viewMenu = menuBar()->addMenu(tr("&View"));
+    viewMenu->addAction(viewWaypointsAction);
+    viewMenu->addAction(viewRestrictedZonesAction);
 
     aboutMenu = menuBar()->addMenu(tr("&Help"));
     aboutMenu->addAction(aboutAction);
@@ -357,77 +266,19 @@ void MainWindow::createMenus()
 
 void MainWindow::createToolbars()
 {
-    editToolBar = addToolBar(tr("Edit"));
-    editToolBar->addAction(deleteAction);
-    editToolBar->addAction(toFrontAction);
-    editToolBar->addAction(sendBackAction);
+    // File Toolbar
+    openToolbar = addToolBar(tr("Open"));
+    openToolbar->addAction(openFileAction);
+    openToolbar->addAction(saveFileAction);
+    openToolbar->addAction(saveFileAsAction);
 
-    fontCombo = new QFontComboBox();
-    connect(fontCombo, &QFontComboBox::currentFontChanged,
-            this, &MainWindow::currentFontChanged);
+    // Editor Toolbar
+    editToolbar = addToolBar(tr("Edit"));
+    editToolbar->addAction(addWaypointAction);
+    editToolbar->addAction(addRestrictedZoneAction);
+    editToolbar->addAction(deleteItemAction);
 
-    fontSizeCombo = new QComboBox;
-    fontSizeCombo->setEditable(true);
-    for (int i = 8; i < 30; i = i + 2)
-        fontSizeCombo->addItem(QString().setNum(i));
-    QIntValidator *validator = new QIntValidator(2, 64, this);
-    fontSizeCombo->setValidator(validator);
-    connect(fontSizeCombo, &QComboBox::currentTextChanged,
-            this, &MainWindow::fontSizeChanged);
-
-    fontColorToolButton = new QToolButton;
-    fontColorToolButton->setPopupMode(QToolButton::MenuButtonPopup);
-    fontColorToolButton->setMenu(createColorMenu(SLOT(textColorChanged()), Qt::black));
-    textAction = fontColorToolButton->menu()->defaultAction();
-    fontColorToolButton->setIcon(createColorToolButtonIcon(":/images/textpointer.png", Qt::black));
-    fontColorToolButton->setAutoFillBackground(true);
-    connect(fontColorToolButton, &QAbstractButton::clicked,
-            this, &MainWindow::textButtonTriggered);
-
-    fillColorToolButton = new QToolButton;
-    fillColorToolButton->setPopupMode(QToolButton::MenuButtonPopup);
-    fillColorToolButton->setMenu(createColorMenu(SLOT(itemColorChanged()), Qt::white));
-    fillAction = fillColorToolButton->menu()->defaultAction();
-    fillColorToolButton->setIcon(createColorToolButtonIcon(
-                                     ":/images/floodfill.png", Qt::white));
-    connect(fillColorToolButton, &QAbstractButton::clicked,
-            this, &MainWindow::fillButtonTriggered);
-
-    lineColorToolButton = new QToolButton;
-    lineColorToolButton->setPopupMode(QToolButton::MenuButtonPopup);
-    lineColorToolButton->setMenu(createColorMenu(SLOT(lineColorChanged()), Qt::black));
-    lineAction = lineColorToolButton->menu()->defaultAction();
-    lineColorToolButton->setIcon(createColorToolButtonIcon(
-                                     ":/images/linecolor.png", Qt::black));
-    connect(lineColorToolButton, &QAbstractButton::clicked,
-            this, &MainWindow::lineButtonTriggered);
-
-    textToolBar = addToolBar(tr("Font"));
-    textToolBar->addWidget(fontCombo);
-    textToolBar->addWidget(fontSizeCombo);
-    textToolBar->addAction(boldAction);
-    textToolBar->addAction(italicAction);
-    textToolBar->addAction(underlineAction);
-
-    colorToolBar = addToolBar(tr("Color"));
-    colorToolBar->addWidget(fontColorToolButton);
-    colorToolBar->addWidget(fillColorToolButton);
-    colorToolBar->addWidget(lineColorToolButton);
-
-    QToolButton *pointerButton = new QToolButton;
-    pointerButton->setCheckable(true);
-    pointerButton->setChecked(true);
-    pointerButton->setIcon(QIcon(":/images/pointer.png"));
-    QToolButton *linePointerButton = new QToolButton;
-    linePointerButton->setCheckable(true);
-    linePointerButton->setIcon(QIcon(":/images/linepointer.png"));
-
-    pointerTypeGroup = new QButtonGroup(this);
-    pointerTypeGroup->addButton(pointerButton, int(DiagramScene::MoveItem));
-    pointerTypeGroup->addButton(linePointerButton, int(DiagramScene::InsertLine));
-    connect(pointerTypeGroup, QOverload<QAbstractButton *>::of(&QButtonGroup::buttonClicked),
-            this, &MainWindow::pointerGroupClicked);
-
+    // View Toolbar
     sceneScaleCombo = new QComboBox;
     QStringList scales;
     scales << tr("50%") << tr("75%") << tr("100%") << tr("125%") << tr("150%");
@@ -436,95 +287,8 @@ void MainWindow::createToolbars()
     connect(sceneScaleCombo, &QComboBox::currentTextChanged,
             this, &MainWindow::sceneScaleChanged);
 
-    pointerToolbar = addToolBar(tr("Pointer type"));
-    pointerToolbar->addWidget(pointerButton);
-    pointerToolbar->addWidget(linePointerButton);
-    pointerToolbar->addWidget(sceneScaleCombo);
-}
-
-QWidget *MainWindow::createBackgroundCellWidget(const QString &text, const QString &image)
-{
-    QToolButton *button = new QToolButton;
-    button->setText(text);
-    button->setIcon(QIcon(image));
-    button->setIconSize(QSize(50, 50));
-    button->setCheckable(true);
-    backgroundButtonGroup->addButton(button);
-
-    QGridLayout *layout = new QGridLayout;
-    layout->addWidget(button, 0, 0, Qt::AlignHCenter);
-    layout->addWidget(new QLabel(text), 1, 0, Qt::AlignCenter);
-
-    QWidget *widget = new QWidget;
-    widget->setLayout(layout);
-
-    return widget;
-}
-
-QWidget *MainWindow::createCellWidget(const QString &text, DiagramItem::DiagramType type)
-{
-
-    DiagramItem item(type, itemMenu);
-    QIcon icon(item.image());
-
-    QToolButton *button = new QToolButton;
-    button->setIcon(icon);
-    button->setIconSize(QSize(50, 50));
-    button->setCheckable(true);
-    buttonGroup->addButton(button, int(type));
-
-    QGridLayout *layout = new QGridLayout;
-    layout->addWidget(button, 0, 0, Qt::AlignHCenter);
-    layout->addWidget(new QLabel(text), 1, 0, Qt::AlignCenter);
-
-    QWidget *widget = new QWidget;
-    widget->setLayout(layout);
-
-    return widget;
-}
-
-QMenu *MainWindow::createColorMenu(const char *slot, QColor defaultColor)
-{
-    QList<QColor> colors;
-    colors << Qt::black << Qt::white << Qt::red << Qt::blue << Qt::yellow;
-    QStringList names;
-    names << tr("black") << tr("white") << tr("red") << tr("blue")
-          << tr("yellow");
-
-    QMenu *colorMenu = new QMenu(this);
-    for (int i = 0; i < colors.count(); ++i) {
-        QAction *action = new QAction(names.at(i), this);
-        action->setData(colors.at(i));
-        action->setIcon(createColorIcon(colors.at(i)));
-        connect(action, SIGNAL(triggered()), this, slot);
-        colorMenu->addAction(action);
-        if (colors.at(i) == defaultColor)
-            colorMenu->setDefaultAction(action);
-    }
-    return colorMenu;
-}
-
-QIcon MainWindow::createColorToolButtonIcon(const QString &imageFile, QColor color)
-{
-    QPixmap pixmap(50, 80);
-    pixmap.fill(Qt::transparent);
-    QPainter painter(&pixmap);
-    QPixmap image(imageFile);
-    // Draw icon centred horizontally on button.
-    QRect target(4, 0, 42, 43);
-    QRect source(0, 0, 42, 43);
-    painter.fillRect(QRect(0, 60, 50, 80), color);
-    painter.drawPixmap(target, image, source);
-
-    return QIcon(pixmap);
-}
-
-QIcon MainWindow::createColorIcon(QColor color)
-{
-    QPixmap pixmap(20, 20);
-    QPainter painter(&pixmap);
-    painter.setPen(Qt::NoPen);
-    painter.fillRect(QRect(0, 0, 20, 20), color);
-
-    return QIcon(pixmap);
+    viewToolbar = addToolBar(tr("View type"));
+    viewToolbar->addAction(viewWaypointsAction);
+    viewToolbar->addAction(viewRestrictedZonesAction);
+    viewToolbar->addWidget(sceneScaleCombo);
 }
