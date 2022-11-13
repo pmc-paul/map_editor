@@ -16,7 +16,7 @@ struct MapConfig {
 };
 
 struct MapEditorConfig {
-    double scale;
+    int scale;
     int rotation;
     int verticalScrollBarValue;
     int horizontalScrollBarValue;
@@ -32,9 +32,10 @@ public:
 
     void readMapParams();
     void readMapEditorParams();
-    void readWaypoints();
+    std::vector<Waypoint *> readWaypoints();
 
     void saveMapEditorParams();
+    void saveWaypoints(std::vector<Waypoint *>);
 
     MapConfig *getMapConfig();
     MapEditorConfig *getMapEditorConfig();
@@ -46,8 +47,6 @@ private:
 
     MapConfig *mapConfig;
     MapEditorConfig *mapEditorConfig;
-
-    std::vector<Waypoint> waypoints;
 };
 
 #endif // MAP_FILE_PARSER_H

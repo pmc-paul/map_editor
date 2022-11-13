@@ -46,7 +46,10 @@ private slots:
     // void textInserted(QGraphicsTextItem *item);
     // void itemSelected(QGraphicsItem *item);
 
-    void sceneScaleChanged(const QString &scale);
+    void sceneScaleChanged(const int &scale);
+    void sceneRotationChanged(const int &rotation);
+
+    void updateSceneTransform();
 
     void about();
 
@@ -57,7 +60,6 @@ private:
     void createToolbars();
 
     MapFileParser *mapFileParser;
-    MapConfig *mapConfig;
     MapEditorConfig *mapEditorConfig;
 
     MapScene *scene;
@@ -89,7 +91,8 @@ private:
     QToolBar *editToolbar;
     QToolBar *viewToolbar;
 
-    QComboBox *sceneScaleCombo;
+    QSpinBox *sceneScaleSpinBox;
+    QSpinBox *sceneRotationSpinBox;
 
     // Toolbox
     QToolBox *toolBox;

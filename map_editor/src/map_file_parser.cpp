@@ -34,7 +34,7 @@ void MapFileParser::readMapEditorParams()
 
         YAML::Node mapEditorParams = config["map_editor"];
 
-        mapEditorConfig->scale = mapEditorParams["scale"].as<double>();
+        mapEditorConfig->scale = mapEditorParams["scale"].as<int>();
         mapEditorConfig->rotation = mapEditorParams["rotation"].as<int>();
 
         mapEditorConfig->verticalScrollBarValue = mapEditorParams["vertical_scroll_bar"].as<int>();
@@ -47,7 +47,7 @@ void MapFileParser::readMapEditorParams()
     {
         qDebug() << "Map editor Parameters not found, creating new config...";
 
-        mapEditorConfig->scale = 1.0;
+        mapEditorConfig->scale = 100;
         mapEditorConfig->rotation = 0;
 
         mapEditorConfig->verticalScrollBarValue = 0;
@@ -77,9 +77,38 @@ void MapFileParser::saveMapEditorParams()
     fout.close();
 }
 
-void MapFileParser::readWaypoints()
+std::vector<Waypoint *> MapFileParser::readWaypoints()
 {
-    qDebug() << "Waypoints read from file.";
+    if(config["waypoints"])
+    {
+        qDebug() << "Waypoints read from file.";
+    }
+    else
+    {
+        qDebug() << "Waypoints not found, creating empty vector.";
+    }
+
+    std::vector<Waypoint *> waypoints = {};
+
+    return waypoints;
+}
+
+void MapFileParser::saveWaypoints(std::vector<Waypoint *> waypoints)
+{
+    YAML::Node waypointsNode = config["waypoints"];
+
+    for(int i = 0; i < waypoints.size(); i++)
+    {
+        waypointsNode[i]["id"] = i;
+        waypointsNode[i]["map_x"] = waypoints[i]->getMapX();
+        waypointsNode[i]["map_y"] = waypoints[i]->getMapY();
+        waypointsNode[i]["scene_x"] = waypoints[i]->pos().x();
+        waypointsNode[i]["scene_y"] = waypoints[i]->pos().y();
+    }
+
+    std::ofstream fout(configFilePath);
+    fout << config;
+    fout.close();
 }
 
 MapConfig *MapFileParser::getMapConfig()

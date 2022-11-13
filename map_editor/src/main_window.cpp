@@ -10,7 +10,7 @@ const int InsertTextButton = 10;
 MainWindow::MainWindow()
 {
     createActions();
-    createToolBox();    // 
+    createToolBox();    // barre de gauche 
     createMenus();      // barre du haut avec les options
 
     scene = new MapScene(viewMenu, this);
@@ -58,29 +58,17 @@ void MainWindow::openFile()
     if(fileName != "")
     {
         mapFileParser = new MapFileParser(fileName.toStdString());
-        mapConfig = mapFileParser->getMapConfig();
-        mapEditorConfig = mapFileParser->getMapEditorConfig();
-        
-        scene->displayMap(QString::fromStdString(mapConfig->filePath));
+        mapEditorConfig = mapFileParser->getMapEditorConfig();     
 
-        // set map editor settings from config
-        view->scale(mapEditorConfig->scale, mapEditorConfig->scale);  // triggers an event which initialize the scrollbars
-        view->rotate(mapEditorConfig->rotation);
+        scene->mapConfig = mapFileParser->getMapConfig();
+        scene->displayMap(QString::fromStdString(scene->mapConfig->filePath));
+
+        // set map editor settings from config 
+        sceneScaleSpinBox->setValue(mapEditorConfig->scale); // weird glitch when scale and rotation equal to 100
+        sceneRotationSpinBox->setValue(mapEditorConfig->rotation);
 
         view->verticalScrollBar()->setSliderPosition(mapEditorConfig->verticalScrollBarValue);
         view->horizontalScrollBar()->setSliderPosition(mapEditorConfig->horizontalScrollBarValue);
-
-
-            // fit map to view
-                // adjust scrollbar position
-                // adjust zoom
-
-            // get image file
-            // get resolution
-
-            // get map editor params
-                // get scale
-                // get origin
             
             // get topological map 
                 // get waypoints
@@ -101,8 +89,9 @@ void MainWindow::saveFile()
     // save map editor config
     mapEditorConfig->verticalScrollBarValue = view->verticalScrollBar()->value();
     mapEditorConfig->horizontalScrollBarValue = view->horizontalScrollBar()->value();
-    mapFileParser->saveMapEditorParams();
 
+    mapFileParser->saveMapEditorParams();
+    mapFileParser->saveWaypoints(scene->waypoints);
 
     // save map with waypoints and everything
     return;
@@ -117,6 +106,8 @@ void MainWindow::saveFileAs()
 void MainWindow::addWaypoint()
 {
     qDebug() << "Add Waypoint button was pressed";
+    scene->setMode(MapScene::InsertWaypoint);
+    // disable drag feature, should add a button to move map
     return;
 }
 
@@ -138,17 +129,31 @@ void MainWindow::viewRestrictedZones()
     return;
 }
 
-void MainWindow::sceneScaleChanged(const QString &scale)
+void MainWindow::sceneScaleChanged(const int &scale)
 {
-    double newScale = scale.left(scale.indexOf(tr("%"))).toDouble() / 100.0;
+    mapEditorConfig->scale = scale;
+    updateSceneTransform();
+
+    return;
+}
+
+void MainWindow::sceneRotationChanged(const int &rotation)
+{
+    mapEditorConfig->rotation = rotation;
+    updateSceneTransform();
+
+    return;
+}
+
+void MainWindow::updateSceneTransform()
+{
+    double newScale = mapEditorConfig->scale / 100.0;
+
     QTransform oldMatrix = view->transform();
     view->resetTransform();
     view->translate(oldMatrix.dx(), oldMatrix.dy());
     view->scale(newScale, newScale);
-
-    mapEditorConfig->scale = newScale;
-
-    qDebug() << "new scale: " << newScale;
+    view->rotate(mapEditorConfig->rotation);
 
     return;
 }
@@ -204,7 +209,7 @@ void MainWindow::createActions()
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
     // Edit Actions
-    addWaypointAction = new QAction(QIcon(":/images/background1.png"),
+    addWaypointAction = new QAction(QIcon(":/images/add-waypoint.png"),
                                 tr("A&dd a New Waypoint"), this);
     addWaypointAction->setStatusTip(tr("Add a new waypoint"));
     connect(addWaypointAction, &QAction::triggered, this, &MainWindow::addWaypoint);
@@ -279,16 +284,34 @@ void MainWindow::createToolbars()
     editToolbar->addAction(deleteItemAction);
 
     // View Toolbar
-    sceneScaleCombo = new QComboBox;
-    QStringList scales;
-    scales << tr("50%") << tr("75%") << tr("100%") << tr("125%") << tr("150%");
-    sceneScaleCombo->addItems(scales);
-    sceneScaleCombo->setCurrentIndex(2);
-    connect(sceneScaleCombo, &QComboBox::currentTextChanged,
-            this, &MainWindow::sceneScaleChanged);
+    sceneScaleSpinBox = new QSpinBox;
+    sceneScaleSpinBox->setRange(50, 400);
+    sceneScaleSpinBox->setSingleStep(10);
+    sceneScaleSpinBox->setSuffix("%");
+    sceneScaleSpinBox->setValue(100);
+
+    connect(sceneScaleSpinBox, SIGNAL(valueChanged(int)), this, SLOT(sceneScaleChanged(int)));
+
+
+    sceneRotationSpinBox = new QSpinBox;
+    sceneRotationSpinBox->setRange(0, 360);
+    sceneRotationSpinBox->setSingleStep(10);
+    sceneRotationSpinBox->setSuffix(" deg");
+    sceneRotationSpinBox->setValue(0);
+
+    connect(sceneRotationSpinBox, SIGNAL(valueChanged(int)), this, SLOT(sceneRotationChanged(int)));
+
+    QHBoxLayout *scaleLayout = new QHBoxLayout;
+    scaleLayout->addWidget(new QLabel("Scale:"));
+    scaleLayout->addWidget(sceneScaleSpinBox);
+    scaleLayout->addWidget(new QLabel("Rotation:"));
+    scaleLayout->addWidget(sceneRotationSpinBox);
+
+    QWidget *scaleWidget = new QWidget();
+    scaleWidget->setLayout(scaleLayout);
 
     viewToolbar = addToolBar(tr("View type"));
     viewToolbar->addAction(viewWaypointsAction);
     viewToolbar->addAction(viewRestrictedZonesAction);
-    viewToolbar->addWidget(sceneScaleCombo);
+    viewToolbar->addWidget(scaleWidget);
 }
