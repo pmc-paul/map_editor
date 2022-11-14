@@ -32,7 +32,7 @@ class MapScene : public QGraphicsScene
     Q_OBJECT
 
 public:
-    enum Mode { InsertWaypoint, InsertLine, SelectWaypoint, InsertRestrictedZone, MoveItem };
+    enum Mode { InsertWaypoint, InsertLink, SelectWaypoint, InsertRestrictedZone, MoveItem };
 
     explicit MapScene(QMenu *itemMenu, QObject *parent = nullptr);
 
@@ -42,16 +42,14 @@ public:
     std::vector<Waypoint *> waypoints;
 
     QFont font() const { return myFont; }
-    QColor textColor() const { return myTextColor; }
-    QColor itemColor() const { return myItemColor; }
     QColor lineColor() const { return myLineColor; }
-    void setLineColor(const QColor &color);
-    void setTextColor(const QColor &color);
-    void setItemColor(const QColor &color);
     void setFont(const QFont &font);
+
+    void setRotation(int rotation);
 
 public slots:
     void setMode(Mode mode);
+    void deleteItem();
 
 signals:
     void waypointInserted(Waypoint *item);
@@ -69,9 +67,10 @@ private:
     bool isItemChange(int type) const;
 
     QGraphicsPixmapItem *map;
+    int mapRotation = 0;
+
     WaypointDialog *waypointDialog;
 
-    Waypoint::WaypointType myWaypointType;
     RestrictedZone::RestrictedZoneType myRestrictedZoneType;
     QMenu *myItemMenu;
     Mode myMode;
@@ -81,8 +80,6 @@ private:
 
     QFont myFont;
 
-    QColor myTextColor;
-    QColor myItemColor;
     QColor myLineColor;
 };
 

@@ -1,6 +1,7 @@
 #include "waypoint.h"
 
 #include <QGraphicsScene>
+#include <QGraphicsItem>
 #include <QGraphicsSceneContextMenuEvent>
 #include <QMenu>
 #include <QPainter>
@@ -78,6 +79,7 @@ void Waypoint::setType(WaypointType type)
     switch (this->type) {
         case Start:
             myPen = new QPen(Qt::green, 3, Qt::SolidLine, Qt::SquareCap, Qt::RoundJoin);
+            text = "S";
             break;
         case Aisle:
             myPen = new QPen(Qt::blue, 3, Qt::SolidLine, Qt::SquareCap, Qt::RoundJoin);
@@ -87,8 +89,11 @@ void Waypoint::setType(WaypointType type)
             break;
         default:
             myPen = new QPen(Qt::gray, 3, Qt::SolidLine, Qt::SquareCap, Qt::RoundJoin);
+            text = "";
             break;
     }
+
+    setPen(*myPen);
 }
 
 QString Waypoint::getTypeInQString()
@@ -105,12 +110,20 @@ QString Waypoint::getTypeInQString()
 
 void Waypoint::setAisle(int aisle)
 {
-    this->aisle = aisle;
+    if(type == WaypointType::Aisle)
+    {
+        this->aisle = aisle;
+        text = QString::number(aisle);
+    }
 }
 
 void Waypoint::setShelf(QString shelf)
 {
-    this->shelf = shelf;
+    if(type == WaypointType::Shelf)
+    {
+        this->shelf = shelf;
+        text = shelf;
+    }
 }
 
 void Waypoint::setPos(const QPointF &pos, float resolution, float origin[3])
@@ -119,6 +132,11 @@ void Waypoint::setPos(const QPointF &pos, float resolution, float origin[3])
 
     mapX = pos.x() * resolution + origin[0];
     mapY = - (pos.y() * resolution + origin[1]);
+}
+
+void Waypoint::setRotation(int rotation)
+{
+    mapRotation = rotation;
 }
 
 void Waypoint::hoverEnterEvent(QGraphicsSceneHoverEvent *hoverEvent)
@@ -138,3 +156,12 @@ void Waypoint::hoverLeaveEvent(QGraphicsSceneHoverEvent *hoverEvent)
 
 float Waypoint::getMapX() { return mapX; }
 float Waypoint::getMapY() { return mapY; }
+
+
+void Waypoint::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    // painter->setPen(*myPen);
+    painter->drawText(this->rect(), Qt::AlignCenter, text);
+
+    QGraphicsEllipseItem::paint(painter, option, widget);
+}

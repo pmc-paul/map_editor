@@ -36,8 +36,8 @@ private slots:
     void saveFileAs();
 
     void addWaypoint();
+    void addLink();
     void addRestrictedZone();
-    void deleteItem();
 
     void viewWaypoints();
     void viewRestrictedZones();
@@ -52,6 +52,9 @@ private slots:
     void updateSceneTransform();
 
     void about();
+
+signals:
+    void deleteItem();
 
 private:
     void createToolBox();
@@ -72,6 +75,7 @@ private:
     QAction *exitAction;
 
     QAction *addWaypointAction;
+    QAction *addLinkAction;
     QAction *addRestrictedZoneAction;
     QAction *deleteItemAction;
 

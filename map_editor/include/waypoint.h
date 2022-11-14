@@ -2,12 +2,14 @@
 #define WAYPOINT_H
 
 #include <QGraphicsEllipseItem>
+#include <QGraphicsTextItem>
 #include <QVector>
 
 QT_BEGIN_NAMESPACE
 class QGraphicsSceneContextMenuEvent;
 class QMenu;
 class QPolygonF;
+class QGraphicsTextItem;
 QT_END_NAMESPACE
 
 // class Arrow;
@@ -27,6 +29,8 @@ public:
 
     void setPos(const QPointF &pos, float resolution, float origin[3]);
 
+    void setRotation(int rotation);
+
     // void removeArrow(Arrow *arrow);
     // void removeArrows();
     WaypointType getType() const { return type; }
@@ -36,6 +40,8 @@ public:
 
 
     // void addArrow(Arrow *arrow);
+
+
 
     float getMapX();
     float getMapY();
@@ -47,10 +53,16 @@ protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *hoverEvent) override;
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *hoverEvent) override;
 
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+
 private:
+    // parameters
     WaypointType type;
-    int aisle = 1;
-    QString shelf = "A";
+    int aisle = 0;
+    QString shelf = "";
+
+    // text centered in ellipse
+    QString text;
 
     QMenu *myContextMenu;
     QPen *myPen;
@@ -60,6 +72,8 @@ private:
     // x, y position in map
     float mapX;
     float mapY;
+
+    int mapRotation;
 
     const int size = 20;
 };

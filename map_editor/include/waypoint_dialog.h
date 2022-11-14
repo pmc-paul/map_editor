@@ -36,7 +36,7 @@ private:
     QSpinBox *aisleEdit;
     QComboBox *shelfEdit;
 
-    QDialogButtonBox *buttonBox;
+    QDialogButtonBox *buttonBox;  
 };
 
 #endif // WAYPOINT_DIALOG_H

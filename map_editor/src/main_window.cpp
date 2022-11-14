@@ -14,6 +14,9 @@ MainWindow::MainWindow()
     createMenus();      // barre du haut avec les options
 
     scene = new MapScene(viewMenu, this);
+    connect(this, &MainWindow::deleteItem, 
+            scene, &MapScene::deleteItem);
+
     // scene->setSceneRect(QRectF(0, 0, 1000, 1000));
     // connect(scene, &MapScene::itemInserted,
     //         this, &MainWindow::itemInserted);
@@ -35,17 +38,6 @@ MainWindow::MainWindow()
 
     setCentralWidget(widget);
     setWindowTitle(tr("Map Editor"));
-}
-
-void MainWindow::deleteItem()
-{
-    // QList<QGraphicsItem *> selectedItems = scene->selectedItems();
-    // for (QGraphicsItem *item : qAsConst(selectedItems)) {
-    //      scene->removeItem(item);
-    //      delete item;
-    // }
-    qDebug() << "Delete Item button was pressed";
-    return;
 }
 
 void MainWindow::openFile()
@@ -105,9 +97,13 @@ void MainWindow::saveFileAs()
 
 void MainWindow::addWaypoint()
 {
-    qDebug() << "Add Waypoint button was pressed";
     scene->setMode(MapScene::InsertWaypoint);
-    // disable drag feature, should add a button to move map
+    return;
+}
+
+void MainWindow::addLink()
+{
+    scene->setMode(MapScene::InsertLink);
     return;
 }
 
@@ -154,6 +150,8 @@ void MainWindow::updateSceneTransform()
     view->translate(oldMatrix.dx(), oldMatrix.dy());
     view->scale(newScale, newScale);
     view->rotate(mapEditorConfig->rotation);
+
+    scene->setRotation(mapEditorConfig->rotation);
 
     return;
 }
@@ -214,6 +212,11 @@ void MainWindow::createActions()
     addWaypointAction->setStatusTip(tr("Add a new waypoint"));
     connect(addWaypointAction, &QAction::triggered, this, &MainWindow::addWaypoint);
 
+    addLinkAction = new QAction(QIcon(":/images/linepointer.png"),
+                                tr("A&dd a New Link"), this);
+    addLinkAction->setStatusTip(tr("Add a new link"));
+    connect(addLinkAction, &QAction::triggered, this, &MainWindow::addLink);
+
     addRestrictedZoneAction = new QAction(QIcon(":/images/background2.png"),
                                 tr("Add a New R&estricted Zone"), this);
     addRestrictedZoneAction->setStatusTip(tr("Add a new restricted zone"));
@@ -258,6 +261,7 @@ void MainWindow::createMenus()
 
     editMenu = menuBar()->addMenu(tr("&Edit"));
     editMenu->addAction(addWaypointAction);
+    editMenu->addAction(addLinkAction);
     editMenu->addAction(addRestrictedZoneAction);
     editMenu->addAction(deleteItemAction);
 
@@ -280,6 +284,7 @@ void MainWindow::createToolbars()
     // Editor Toolbar
     editToolbar = addToolBar(tr("Edit"));
     editToolbar->addAction(addWaypointAction);
+    editToolbar->addAction(addLinkAction);
     editToolbar->addAction(addRestrictedZoneAction);
     editToolbar->addAction(deleteItemAction);
 
