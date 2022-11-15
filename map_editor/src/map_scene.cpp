@@ -20,7 +20,7 @@ MapScene::MapScene(QMenu *itemMenu, QObject *parent)
 void MapScene::displayMap(QString imageFileName)
 {
     map = addPixmap(QPixmap(imageFileName));
-    map->setZValue(-1);
+    map->setZValue(-100.0);
 }
 
 void MapScene::setRotation(int rotation)
@@ -63,7 +63,7 @@ void MapScene::mousePressEvent(QGraphicsSceneMouseEvent *mouseEvent)
 
             if(waypointDialog->result() == QDialog::Accepted)
             {
-                waypoint->setType(waypointDialog->getType());
+                waypoint->setWaypointType(waypointDialog->getType());
                 waypoint->setAisle(waypointDialog->getAisle());
                 waypoint->setShelf(waypointDialog->getShelf());
             }
@@ -75,11 +75,13 @@ void MapScene::mousePressEvent(QGraphicsSceneMouseEvent *mouseEvent)
         }
 
         case InsertLink:
+        {
             line = new QGraphicsLineItem(QLineF(mouseEvent->scenePos(),
                                                 mouseEvent->scenePos()));
-            line->setPen(QPen(myLineColor, 1));
+            line->setPen(QPen(myLineColor, 2));
             addItem(line);
             break;
+        }
 
         case InsertRestrictedZone:
         {
@@ -89,17 +91,6 @@ void MapScene::mousePressEvent(QGraphicsSceneMouseEvent *mouseEvent)
             // addItem(item);
             // item->setPos(mouseEvent->scenePos());
             emit restrictedZoneInserted(restrictedZone);
-            break;
-        }
-
-        case SelectWaypoint:
-        {
-            qDebug() << "item selected...";
-            waypoint = new Waypoint(myItemMenu);
-            // item->setBrush(myItemColor);
-            // addItem(item);
-            // item->setPos(mouseEvent->scenePos());
-            emit itemSelected(waypoint);;
             break;
         }
 
@@ -121,33 +112,44 @@ void MapScene::mouseMoveEvent(QGraphicsSceneMouseEvent *mouseEvent)
 
 void MapScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *mouseEvent)
 {
-    // if (line != nullptr && myMode == InsertLink) {
-    //     QList<QGraphicsItem *> startItems = items(line->line().p1());
-    //     if (startItems.count() && startItems.first() == line)
-    //         startItems.removeFirst();
-    //     QList<QGraphicsItem *> endItems = items(line->line().p2());
-    //     if (endItems.count() && endItems.first() == line)
-    //         endItems.removeFirst();
+    if (line != nullptr && myMode == InsertLink) {
+        // check if no items below line
+        QList<QGraphicsItem *> startItems = items(line->line().p1());
+        qDebug() << "start items size: " << startItems.size();
 
-    //     removeItem(line);
-    //     delete line;
+        if (startItems.count() && startItems.first() == line)
+            startItems.removeFirst();
 
-    //     // if (startItems.count() > 0 && endItems.count() > 0 &&
-    //     //     startItems.first()->type() == DiagramItem::Type &&
-    //     //     endItems.first()->type() == DiagramItem::Type &&
-    //     //     startItems.first() != endItems.first()) {
-    //     //     DiagramItem *startItem = qgraphicsitem_cast<DiagramItem *>(startItems.first());
-    //     //     DiagramItem *endItem = qgraphicsitem_cast<DiagramItem *>(endItems.first());
-    //     //     Arrow *arrow = new Arrow(startItem, endItem);
-    //     //     arrow->setColor(myLineColor);
-    //     //     startItem->addArrow(arrow);
-    //     //     endItem->addArrow(arrow);
-    //     //     arrow->setZValue(-1000.0);
-    //     //     addItem(arrow);
-    //     //     arrow->updatePosition();
-    //     // }
-    // }
-    // line = nullptr;
+        QList<QGraphicsItem *> endItems = items(line->line().p2());
+        qDebug() << "end items size: " << endItems.size();
+
+        if (endItems.count() && endItems.first() == line)
+            endItems.removeFirst();
+
+        removeItem(line);
+        delete line;
+
+        // add line to waypoints
+        if (startItems.count() > 0 && endItems.count() > 0 &&
+            startItems.first()->type() == Waypoint::Type &&
+            endItems.first()->type() == Waypoint::Type &&
+            startItems.first() != endItems.first()) 
+        {
+            qDebug() << "waypoints found at beginning and end...";
+
+            Waypoint *startItem = qgraphicsitem_cast<Waypoint *>(startItems.first());
+            Waypoint *endItem = qgraphicsitem_cast<Waypoint *>(endItems.first());
+
+            Link *link = new Link(startItem, endItem);
+            link->setColor(myLineColor);
+            startItem->addLink(link);
+            endItem->addLink(link);
+            link->setZValue(-1.0);
+            addItem(link);
+            link->updatePosition();
+        }
+    }
+    line = nullptr;
 
     myMode = MoveItem;
 
@@ -167,7 +169,7 @@ void MapScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *mouseEvent)
             // update waypoint
             if(waypointDialog->result() == QDialog::Accepted)
             {
-                waypoint->setType(waypointDialog->getType());
+                waypoint->setWaypointType(waypointDialog->getType());
                 waypoint->setAisle(waypointDialog->getAisle());
                 waypoint->setShelf(waypointDialog->getShelf());
             }

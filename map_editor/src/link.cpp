@@ -26,7 +26,6 @@ QRectF Link::boundingRect() const
 QPainterPath Link::shape() const
 {
     QPainterPath path = QGraphicsLineItem::shape();
-    path.addPolygon(arrowHead);
     return path;
 }
 
@@ -43,38 +42,15 @@ void Link::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 
     QPen myPen = pen();
     myPen.setColor(myColor);
-    qreal arrowSize = 20;
     painter->setPen(myPen);
     painter->setBrush(myColor);
 
-    // QLineF centerLine(myStartItem->pos(), myEndItem->pos());
-    // QPolygonF endPolygon = myEndItem->polygon();
-    // QPointF p1 = endPolygon.first() + myEndItem->pos();
-    QPointF intersectPoint;
-    // for (int i = 1; i < endPolygon.count(); ++i) {
-    //     QPointF p2 = endPolygon.at(i) + myEndItem->pos();
-    //     QLineF polyLine = QLineF(p1, p2);
-    //     QLineF::IntersectionType intersectionType =
-    //         polyLine.intersects(centerLine, &intersectPoint);
-    //     if (intersectionType == QLineF::BoundedIntersection)
-    //         break;
-    //     p1 = p2;
-    // }
+    QPointF p1(myStartItem->pos().x() + 0.5*myStartItem->getSize(), myStartItem->pos().y() + 0.5*myStartItem->getSize());
+    QPointF p2(myEndItem->pos().x() + 0.5*myEndItem->getSize(), myEndItem->pos().y() + 0.5*myEndItem->getSize());
 
-    setLine(QLineF(intersectPoint, myStartItem->pos()));
-
-    double angle = std::atan2(-line().dy(), line().dx());
-
-    QPointF arrowP1 = line().p1() + QPointF(sin(angle + M_PI / 3) * arrowSize,
-                                    cos(angle + M_PI / 3) * arrowSize);
-    QPointF arrowP2 = line().p1() + QPointF(sin(angle + M_PI - M_PI / 3) * arrowSize,
-                                    cos(angle + M_PI - M_PI / 3) * arrowSize);
-
-    arrowHead.clear();
-    arrowHead << line().p1() << arrowP1 << arrowP2;
+    setLine(QLineF(p1, p2));
 
     painter->drawLine(line());
-    painter->drawPolygon(arrowHead);
     if (isSelected()) {
         painter->setPen(QPen(myColor, 1, Qt::DashLine));
         QLineF myLine = line();

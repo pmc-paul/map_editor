@@ -2,6 +2,7 @@
 #define MAP_SCENE_H
 
 #include "waypoint.h"
+#include "link.h"
 #include "restricted_zone.h"
 
 #include "map_file_parser.h"
@@ -32,7 +33,7 @@ class MapScene : public QGraphicsScene
     Q_OBJECT
 
 public:
-    enum Mode { InsertWaypoint, InsertLink, SelectWaypoint, InsertRestrictedZone, MoveItem };
+    enum Mode { InsertWaypoint, InsertLink, InsertRestrictedZone, MoveItem };
 
     explicit MapScene(QMenu *itemMenu, QObject *parent = nullptr);
 

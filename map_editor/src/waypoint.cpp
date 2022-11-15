@@ -1,4 +1,5 @@
 #include "waypoint.h"
+#include "link.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsItem>
@@ -10,10 +11,11 @@
 Waypoint::Waypoint(QMenu *contextMenu, QGraphicsItem *parent)
     : QGraphicsEllipseItem(parent), myContextMenu(contextMenu)
 {
-    setType(WaypointType::Start);
+    setWaypointType(WaypointType::Start);
 
     setRect(0, 0, size, size);
     setPen(*myPen);
+    setBrush(Qt::white);
     setFlag(QGraphicsItem::ItemIsMovable, true);
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
@@ -21,28 +23,28 @@ Waypoint::Waypoint(QMenu *contextMenu, QGraphicsItem *parent)
     setAcceptHoverEvents(true);
 }
 
-// void Waypoint::removeArrow(Arrow *arrow)
-// {
-//     arrows.removeAll(arrow);
-// }
+void Waypoint::removeLink(Link *link)
+{
+    links.removeAll(link);
+}
 
-// void Waypoint::removeArrows()
-// {
-//     // need a copy here since removeArrow() will
-//     // modify the arrows container
-//     const auto arrowsCopy = arrows;
-//     for (Arrow *arrow : arrowsCopy) {
-//         arrow->startItem()->removeArrow(arrow);
-//         arrow->endItem()->removeArrow(arrow);
-//         scene()->removeItem(arrow);
-//         delete arrow;
-//     }
-// }
+void Waypoint::removeLinks()
+{
+    // need a copy here since removeLink() will
+    // modify the links container
+    const auto linksCopy = links;
+    for (Link *link : linksCopy) {
+        link->startItem()->removeLink(link);
+        link->endItem()->removeLink(link);
+        scene()->removeItem(link);
+        delete link;
+    }
+}
 
-// void Waypoint::addArrow(Arrow *arrow)
-// {
-//     arrows.append(arrow);
-// }
+void Waypoint::addLink(Link *link)
+{
+    links.append(link);
+}
 
 void Waypoint::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
@@ -53,30 +55,30 @@ void Waypoint::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
 QVariant Waypoint::itemChange(GraphicsItemChange change, const QVariant &value)
 {
-    // if (change == QGraphicsItem::ItemPositionChange) {
-    //     for (Arrow *arrow : qAsConst(arrows))
-    //         arrow->updatePosition();
-    // }
+    if (change == Waypoint::ItemPositionChange) {
+        for (Link *link : qAsConst(links))
+            link->updatePosition();
+    }
 
     return value;
 }
 
-void Waypoint::setType(QString type)
+void Waypoint::setWaypointType(QString waypointType)
 {
-    if(type == "Start")
-        setType(WaypointType::Start);
-    else if(type == "Aisle")
-        setType(WaypointType::Aisle);
-    else if(type == "Shelf")
-        setType(WaypointType::Shelf);
+    if(waypointType == "Start")
+        setWaypointType(WaypointType::Start);
+    else if(waypointType == "Aisle")
+        setWaypointType(WaypointType::Aisle);
+    else if(waypointType == "Shelf")
+        setWaypointType(WaypointType::Shelf);
     else
         qDebug() << "Selected type not recognized.";
 }
 
-void Waypoint::setType(WaypointType type)
+void Waypoint::setWaypointType(WaypointType waypointType)
 {
-    this->type = type;
-    switch (this->type) {
+    this->waypointType = waypointType;
+    switch (this->waypointType) {
         case Start:
             myPen = new QPen(Qt::green, 3, Qt::SolidLine, Qt::SquareCap, Qt::RoundJoin);
             text = "S";
@@ -98,7 +100,7 @@ void Waypoint::setType(WaypointType type)
 
 QString Waypoint::getTypeInQString()
 {
-    switch (this->type) {
+    switch (this->waypointType) {
         case Start:
             return "Start";
         case Aisle:
@@ -110,7 +112,7 @@ QString Waypoint::getTypeInQString()
 
 void Waypoint::setAisle(int aisle)
 {
-    if(type == WaypointType::Aisle)
+    if(waypointType == WaypointType::Aisle)
     {
         this->aisle = aisle;
         text = QString::number(aisle);
@@ -119,7 +121,7 @@ void Waypoint::setAisle(int aisle)
 
 void Waypoint::setShelf(QString shelf)
 {
-    if(type == WaypointType::Shelf)
+    if(waypointType == WaypointType::Shelf)
     {
         this->shelf = shelf;
         text = shelf;
@@ -160,8 +162,11 @@ float Waypoint::getMapY() { return mapY; }
 
 void Waypoint::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
-    // painter->setPen(*myPen);
+    // order is important to print text above ellipse (since the ellipse is filled with white)
+    QGraphicsEllipseItem::paint(painter, option, widget);
+
+    painter->setPen(Qt::black);
     painter->drawText(this->rect(), Qt::AlignCenter, text);
 
-    QGraphicsEllipseItem::paint(painter, option, widget);
+    
 }

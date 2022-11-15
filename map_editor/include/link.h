@@ -10,8 +10,7 @@ class Link : public QGraphicsLineItem
 public:
     enum { Type = UserType + 4 };
 
-    Link(Waypoint *startItem, Waypoint *endItem,
-          QGraphicsItem *parent = nullptr);
+    Link(Waypoint *startItem, Waypoint *endItem, QGraphicsItem *parent = nullptr);
 
     int type() const override { return Type; }
     QRectF boundingRect() const override;
@@ -29,7 +28,6 @@ protected:
 private:
     Waypoint *myStartItem;
     Waypoint *myEndItem;
-    QPolygonF arrowHead;
     QColor myColor = Qt::black;
 };
 

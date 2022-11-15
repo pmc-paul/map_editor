@@ -12,17 +12,18 @@ class QPolygonF;
 class QGraphicsTextItem;
 QT_END_NAMESPACE
 
-// class Arrow;
+class Link;
 
 class Waypoint : public QGraphicsEllipseItem
 {
 public:
+    enum { Type = UserType + 15 };
     enum WaypointType { Start, Aisle, Shelf };
 
     Waypoint(QMenu *contextMenu, QGraphicsItem *parent = nullptr);
 
-    void setType(WaypointType waypointType);
-    void setType(QString waypointType);
+    void setWaypointType(WaypointType waypointType);
+    void setWaypointType(QString waypointType);
 
     void setAisle(int aisle);
     void setShelf(QString shelf);
@@ -31,16 +32,19 @@ public:
 
     void setRotation(int rotation);
 
-    // void removeArrow(Arrow *arrow);
-    // void removeArrows();
-    WaypointType getType() const { return type; }
+    
+    WaypointType getWaypointType() const { return waypointType; }
     QString getTypeInQString();
     int getAisle() const { return aisle; }
     QString getShelf() const { return shelf; }
+    int getSize() const { return size; }
 
+    int type() const override { return Type; }
+    
 
-    // void addArrow(Arrow *arrow);
-
+    void addLink(Link *link);
+    void removeLink(Link *link);
+    void removeLinks();
 
 
     float getMapX();
@@ -57,7 +61,7 @@ protected:
 
 private:
     // parameters
-    WaypointType type;
+    WaypointType waypointType;
     int aisle = 0;
     QString shelf = "";
 
@@ -66,7 +70,7 @@ private:
 
     QMenu *myContextMenu;
     QPen *myPen;
-    // QVector<Arrow *> arrows;
+    QVector<Link *> links;
 
 
     // x, y position in map
