@@ -8,9 +8,24 @@
 #include <QPainter>
 #include <QDebug>
 
-Waypoint::Waypoint(QMenu *contextMenu, QGraphicsItem *parent)
+Waypoint::Waypoint()
+{
+    setRect(0, 0, size, size);
+    setPen(QPen(Qt::black, 3, Qt::SolidLine, Qt::SquareCap, Qt::RoundJoin));
+    setBrush(Qt::white);
+    setFlag(QGraphicsItem::ItemIsMovable, true);
+    setFlag(QGraphicsItem::ItemIsSelectable, true);
+    setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
+
+    setAcceptHoverEvents(true);
+}
+
+Waypoint::Waypoint(float resolution, float origin[3], QMenu *contextMenu, QGraphicsItem *parent)
     : QGraphicsEllipseItem(parent), myContextMenu(contextMenu)
 {
+    this->resolution = resolution;
+    this->origin = origin;
+
     setWaypointType(WaypointType::Start);
 
     setRect(0, 0, size, size);
@@ -58,6 +73,9 @@ QVariant Waypoint::itemChange(GraphicsItemChange change, const QVariant &value)
     if (change == Waypoint::ItemPositionChange) {
         for (Link *link : qAsConst(links))
             link->updatePosition();
+
+        if(scenePos().x() != 0 && scenePos().y())
+            calculateMapPosition(scenePos(), false);
     }
 
     return value;
@@ -128,17 +146,11 @@ void Waypoint::setShelf(QString shelf)
     }
 }
 
-void Waypoint::setPos(const QPointF &pos, float resolution, float origin[3])
+void Waypoint::setPos(const QPointF &pos)
 {
     QGraphicsEllipseItem::setPos(pos.x() - 0.5*size, pos.y() - 0.5*size);
 
-    mapX = pos.x() * resolution + origin[0];
-    mapY = - (pos.y() * resolution + origin[1]);
-}
-
-void Waypoint::setRotation(int rotation)
-{
-    mapRotation = rotation;
+    calculateMapPosition(pos, true);
 }
 
 void Waypoint::hoverEnterEvent(QGraphicsSceneHoverEvent *hoverEvent)
@@ -156,10 +168,6 @@ void Waypoint::hoverLeaveEvent(QGraphicsSceneHoverEvent *hoverEvent)
     QGraphicsItem::hoverLeaveEvent(hoverEvent);
 }
 
-float Waypoint::getMapX() { return mapX; }
-float Waypoint::getMapY() { return mapY; }
-
-
 void Waypoint::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     // order is important to print text above ellipse (since the ellipse is filled with white)
@@ -169,4 +177,17 @@ void Waypoint::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, 
     painter->drawText(this->rect(), Qt::AlignCenter, text);
 
     
+}
+
+void Waypoint::calculateMapPosition(const QPointF &pos, bool exact_pose)
+{
+    QPointF pos_copy(pos);
+    if(!exact_pose)
+    {
+        QPointF offset(0.5*size, 0.5*size);
+        pos_copy += offset;
+    }
+
+    mapX = pos_copy.x() * resolution + origin[0];
+    mapY = - (pos_copy.y() * resolution + origin[1]);
 }

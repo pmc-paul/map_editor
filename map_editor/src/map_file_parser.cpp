@@ -8,6 +8,7 @@ MapFileParser::MapFileParser(std::string filepath)
     readMapParams();
     readMapEditorParams();
     readWaypoints();
+    readLinks();
 }
 
 void MapFileParser::readMapParams()
@@ -77,46 +78,130 @@ void MapFileParser::saveMapEditorParams()
     fout.close();
 }
 
-std::vector<Waypoint *> MapFileParser::readWaypoints()
+void MapFileParser::readWaypoints()
 {
+    waypoints = std::vector<Waypoint *>();
+
     if(config["waypoints"])
     {
-        qDebug() << "Waypoints read from file.";
-    }
-    else
-    {
-        qDebug() << "Waypoints not found, creating empty vector.";
-    }
+        for(int i = 0; i < config["waypoints"].size(); i++)
+        {
+            YAML::Node waypointNode = config["waypoints"][i];
+            Waypoint *waypoint = new Waypoint();
+            
+            // set type
+            YAML::Node infoNode = waypointNode["info"];
+            waypoint->setWaypointType(infoNode["type"].as<std::string>());
+            waypoint->setAisle(infoNode["aisle"].as<int>());
+            waypoint->setShelf(infoNode["shelf"].as<std::string>());
 
-    std::vector<Waypoint *> waypoints = {};
+            // set position
+            YAML::Node positionNode = waypointNode["position"];
+            waypoint->setResolution(mapConfig->resolution);
+            waypoint->setOrigin(mapConfig->origin);
 
-    return waypoints;
+            // qDebug() << positionNode["map"]["x"].as<float>();
+            // qDebug() << positionNode["map"]["y"].as<float>();
+
+            // should set the map position at the same time
+            int size = 20;
+            if(infoNode["size"])
+                int size = infoNode["size"].as<int>();
+            waypoint->setPos(QPointF(positionNode["scene"]["x"].as<float>() + 0.5 * size,
+                                     positionNode["scene"]["y"].as<float>() + 0.5 * size));
+
+            // append to vector
+            waypoints.push_back(waypoint);
+        }        
+    }
 }
 
-void MapFileParser::saveWaypoints(std::vector<Waypoint *> waypoints)
+void MapFileParser::readLinks()
 {
-    YAML::Node waypointsNode = config["waypoints"];
+    links = std::vector<std::pair<int, int>>();
 
+    if(config["links"])
+    {
+        for(int i = 0; i < config["links"].size(); i++)
+        {
+            YAML::Node linkNode = config["links"][i];
+
+            std::pair<int, int> link(linkNode["start"].as<int>(),
+                                     linkNode["end"].as<int>());
+            links.push_back(link);
+        }
+    }
+}
+
+void MapFileParser::saveWaypointsAndLinks(std::vector<Waypoint *> waypoints)
+{
+    YAML::Node waypointsNode;
+    YAML::Node linksNode;
     for(int i = 0; i < waypoints.size(); i++)
     {
-        waypointsNode[i]["id"] = i;
-        waypointsNode[i]["map_x"] = waypoints[i]->getMapX();
-        waypointsNode[i]["map_y"] = waypoints[i]->getMapY();
-        waypointsNode[i]["scene_x"] = waypoints[i]->pos().x();
-        waypointsNode[i]["scene_y"] = waypoints[i]->pos().y();
+        YAML::Node scene;
+        scene["x"] = waypoints[i]->pos().x();
+        scene["y"] = waypoints[i]->pos().y();
+
+        YAML::Node map;
+        map["x"] = waypoints[i]->getMapX();
+        map["y"] = waypoints[i]->getMapY();
+
+        YAML::Node position;
+        position["scene"] = scene;
+        position["map"] = map;
+        
+        YAML::Node info;
+        info["type"] = waypoints[i]->getTypeInQString().toStdString();
+        info["aisle"] = waypoints[i]->getAisle();
+        info["shelf"] = waypoints[i]->getShelf().toStdString();
+        info["size"] = waypoints[i]->getSize();
+
+        YAML::Node waypoint;
+        waypoint["id"] = i;
+        waypoint["position"] = position;
+        waypoint["info"] = info;
+
+        waypointsNode[i] = waypoint;
+
+        // check for new links to add
+        std::vector<Link *> links = waypoints[i]->getLinksAsStdVector();
+        for(int j = 0; j < links.size(); j++)
+        {
+            int startItemIndex = findWaypointIndexInVector(waypoints, links[j]->startItem());
+            int endItemIndex = findWaypointIndexInVector(waypoints, links[j]->endItem());
+
+            if((startItemIndex == i && endItemIndex > i) || (startItemIndex > i && endItemIndex == i))
+            {
+                YAML::Node link;
+                link["start"] = startItemIndex;
+                link["end"] = endItemIndex;
+                link["weight"] = calculateLinkWeight(waypoints[startItemIndex], waypoints[endItemIndex]);
+
+                linksNode.push_back(link);
+            }
+        }
+
     }
+
+    config["waypoints"] = waypointsNode;
+    config["links"] = linksNode;
 
     std::ofstream fout(configFilePath);
     fout << config;
     fout.close();
 }
 
-MapConfig *MapFileParser::getMapConfig()
+int MapFileParser::findWaypointIndexInVector(std::vector<Waypoint *> waypoints, Waypoint *waypoint)
 {
-    return mapConfig;
+    auto it = find(waypoints.begin(), waypoints.end(), waypoint);
+    if (it != waypoints.end()) 
+        return it - waypoints.begin();
+    else
+        return -1;
 }
 
-MapEditorConfig *MapFileParser::getMapEditorConfig()
+double MapFileParser::calculateLinkWeight(Waypoint *start, Waypoint *end)
 {
-    return mapEditorConfig;
+    return sqrt(pow(start->getMapX() - end->getMapX(), 2) + pow(start->getMapY() - end->getMapY(), 2));
 }

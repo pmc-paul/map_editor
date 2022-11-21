@@ -38,6 +38,10 @@ public:
     explicit MapScene(QMenu *itemMenu, QObject *parent = nullptr);
 
     void displayMap(QString imageFileName);
+    void loadWaypoints();
+    void loadWaypoint(Waypoint *waypoint);
+    void loadLinks(std::vector<std::pair<int, int>> links);
+    void loadLink(int startIndex, int endIndex);
     
     MapConfig *mapConfig;
     std::vector<Waypoint *> waypoints;
@@ -80,7 +84,6 @@ private:
     QGraphicsLineItem *line;
 
     QFont myFont;
-
     QColor myLineColor;
 };
 

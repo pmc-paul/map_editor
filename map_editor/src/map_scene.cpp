@@ -23,6 +23,39 @@ void MapScene::displayMap(QString imageFileName)
     map->setZValue(-100.0);
 }
 
+void MapScene::loadWaypoints()
+{
+    for(Waypoint *waypoint : waypoints)
+        loadWaypoint(waypoint);
+}
+
+void MapScene::loadWaypoint(Waypoint *waypoint)
+{
+    waypoint->setContextMenu(myItemMenu);
+    //waypoint->setParentItem(this);
+    addItem(waypoint);
+}
+
+void MapScene::loadLinks(std::vector<std::pair<int, int>> links)
+{
+    for(std::pair<int, int> link : links)
+        loadLink(link.first, link.second);
+}
+
+void MapScene::loadLink(int startIndex, int endIndex)
+{
+    Waypoint *startItem = waypoints.at(startIndex);
+    Waypoint *endItem = waypoints.at(endIndex);
+
+    Link *link = new Link(startItem, endItem);
+    link->setColor(myLineColor);
+    startItem->addLink(link);
+    endItem->addLink(link);
+    link->setZValue(-1.0);
+    addItem(link);
+    link->updatePosition();
+}
+
 void MapScene::setRotation(int rotation)
 {
     mapRotation = rotation;
@@ -47,16 +80,14 @@ void MapScene::mousePressEvent(QGraphicsSceneMouseEvent *mouseEvent)
         case InsertWaypoint:
         {
             // create waypoint and add to scene
-            waypoint = new Waypoint(myItemMenu);
+            waypoint = new Waypoint(mapConfig->resolution, mapConfig->origin, myItemMenu);
             addItem(waypoint);
 
             // set waypoint position to the mouse position
-            waypoint->setPos(mouseEvent->scenePos(), mapConfig->resolution, mapConfig->origin);
+            waypoint->setPos(mouseEvent->scenePos());
 
             // add waypoint to vector to modify it later
             waypoints.push_back(waypoint);
-
-            qDebug() << "waypoints vector size: " << waypoints.size();
 
             // dialog to configure new waypoint
             waypointDialog->exec();
@@ -69,8 +100,6 @@ void MapScene::mousePressEvent(QGraphicsSceneMouseEvent *mouseEvent)
             }
 
             emit waypointInserted(waypoint);
-
-            myMode = MoveItem;
             break;
         }
 
@@ -150,8 +179,6 @@ void MapScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *mouseEvent)
         }
     }
     line = nullptr;
-
-    myMode = MoveItem;
 
     QGraphicsScene::mouseReleaseEvent(mouseEvent);
 }

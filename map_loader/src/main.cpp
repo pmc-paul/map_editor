@@ -36,8 +36,6 @@ class WaypointsServer
 
         std::string frame_id_;
 
-        /** Load a map given a path to a yaml file
-         */
         bool loadWaypointsFromYaml(std::string path_to_yaml)
         {
             // create yaml parser
@@ -47,15 +45,19 @@ class WaypointsServer
             YAML::Node waypoints = config["waypoints"];
             if(waypoints)
             {
+                std::cout << "Waypoints found." << std::endl;
+
                 visualization_msgs::MarkerArray waypointsArrayMsg;
                 for(int i = 0; i < waypoints.size(); i++) {
+                    std::cout << "Loading waypoint #" << i << std::endl;
+
                     // create new marker array message
                     visualization_msgs::Marker waypointMsg;
 
                     waypointMsg.header.frame_id = frame_id_;
                     waypointMsg.id = waypoints[i]["id"].as<int>();
-                    waypointMsg.pose.position.x = waypoints[i]["map_x"].as<float>();
-                    waypointMsg.pose.position.y = waypoints[i]["map_y"].as<float>();
+                    waypointMsg.pose.position.x = waypoints[i]["position"]["map"]["x"].as<float>();
+                    waypointMsg.pose.position.y = waypoints[i]["position"]["map"]["y"].as<float>();
 
                     waypointMsg.action = 0; // add or modify
 
@@ -64,12 +66,22 @@ class WaypointsServer
                     waypointMsg.scale.x = 1.0;
                     waypointMsg.scale.y = 1.0;
 
-                    waypointMsg.color.a = 1.0;
-                    waypointMsg.color.r = 1.0;
+                    // set marker color depending on type 
+                    std::string type = waypoints[i]["info"]["type"].as<std::string>();
+                    if(type == "Start")
+                        waypointMsg.color.g = 1.0;
+                    else if(type == "Aisle")
+                        waypointMsg.color.b = 1.0;
+                    else if(type == "Shelf")
+                        waypointMsg.color.r = 1.0;
+
+                    waypointMsg.color.a = 1.0;    
 
                     // append marker to array
                     waypointsArrayMsg.markers.push_back(waypointMsg);
                 }
+
+                // load links?
 
                 waypoints_markers_pub_.publish(waypointsArrayMsg);
             }

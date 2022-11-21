@@ -31,7 +31,7 @@ MainWindow::MainWindow()
     view = new QGraphicsView(scene);
     layout->addWidget(view);
 
-    view->setDragMode(QGraphicsView::ScrollHandDrag);
+    enableDrag();
 
     QWidget *widget = new QWidget;
     widget->setLayout(layout);
@@ -62,12 +62,12 @@ void MainWindow::openFile()
         view->verticalScrollBar()->setSliderPosition(mapEditorConfig->verticalScrollBarValue);
         view->horizontalScrollBar()->setSliderPosition(mapEditorConfig->horizontalScrollBarValue);
             
-            // get topological map 
-                // get waypoints
-                // render waypoints
+        scene->waypoints = mapFileParser->getWaypoints();
+        scene->loadWaypoints();
 
-                // get restricted zones
-                // render restricted zones
+        scene->loadLinks(mapFileParser->getLinks());
+
+        // get restricted zones
     }
     
 
@@ -83,7 +83,7 @@ void MainWindow::saveFile()
     mapEditorConfig->horizontalScrollBarValue = view->horizontalScrollBar()->value();
 
     mapFileParser->saveMapEditorParams();
-    mapFileParser->saveWaypoints(scene->waypoints);
+    mapFileParser->saveWaypointsAndLinks(scene->waypoints);
 
     // save map with waypoints and everything
     return;
@@ -97,14 +97,38 @@ void MainWindow::saveFileAs()
 
 void MainWindow::addWaypoint()
 {
-    scene->setMode(MapScene::InsertWaypoint);
-    return;
+    if(addWaypointAction->isChecked())
+    {
+        scene->setMode(MapScene::InsertWaypoint);
+
+        if(addLinkAction->isChecked())
+            addLinkAction->setChecked(false);
+
+        disableDrag();
+    }
+    else
+    {
+        scene->setMode(MapScene::MoveItem);
+        enableDrag();
+    }   
 }
 
 void MainWindow::addLink()
-{
-    scene->setMode(MapScene::InsertLink);
-    return;
+{    
+    if(addLinkAction->isChecked())
+    {
+        scene->setMode(MapScene::InsertLink);
+
+        if(addWaypointAction->isChecked())
+            addWaypointAction->setChecked(false);
+        
+        disableDrag();
+    }
+    else
+    {
+        scene->setMode(MapScene::MoveItem);
+        enableDrag();
+    }   
 }
 
 void MainWindow::addRestrictedZone()
@@ -210,11 +234,15 @@ void MainWindow::createActions()
     addWaypointAction = new QAction(QIcon(":/images/add-waypoint.png"),
                                 tr("A&dd a New Waypoint"), this);
     addWaypointAction->setStatusTip(tr("Add a new waypoint"));
+    addWaypointAction->setCheckable(true);
+    addWaypointAction->setChecked(false);
     connect(addWaypointAction, &QAction::triggered, this, &MainWindow::addWaypoint);
 
     addLinkAction = new QAction(QIcon(":/images/linepointer.png"),
                                 tr("A&dd a New Link"), this);
     addLinkAction->setStatusTip(tr("Add a new link"));
+    addLinkAction->setCheckable(true);
+    addLinkAction->setChecked(false);
     connect(addLinkAction, &QAction::triggered, this, &MainWindow::addLink);
 
     addRestrictedZoneAction = new QAction(QIcon(":/images/background2.png"),
@@ -319,4 +347,14 @@ void MainWindow::createToolbars()
     viewToolbar->addAction(viewWaypointsAction);
     viewToolbar->addAction(viewRestrictedZonesAction);
     viewToolbar->addWidget(scaleWidget);
+}
+
+void MainWindow::enableDrag()
+{
+    view->setDragMode(QGraphicsView::ScrollHandDrag);
+}
+
+void MainWindow::disableDrag()
+{
+    view->setDragMode(QGraphicsView::NoDrag);
 }

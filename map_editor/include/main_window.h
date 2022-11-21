@@ -62,6 +62,9 @@ private:
     void createMenus();
     void createToolbars();
 
+    void enableDrag();
+    void disableDrag();
+
     MapFileParser *mapFileParser;
     MapEditorConfig *mapEditorConfig;
 
